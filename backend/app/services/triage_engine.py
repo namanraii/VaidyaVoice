@@ -48,9 +48,7 @@ class TriageEngine:
         if language == LanguageCode.UNKNOWN and detected_language:
             language = LanguageCode(detected_language) if detected_language in [l.value for l in LanguageCode] else LanguageCode.HI
 
-        if language != LanguageCode.UNKNOWN and language != LanguageCode.EN and transcript:
-            transcript = await sarvam_service.translate(transcript, LanguageCode.UNKNOWN, language)
-        
+        # Skipping translation to English - Sarvam LLM handles Indian languages natively!        
         # Step 3: LLM Symptom Extraction
         logger.info("Step 3: LLM extract")
         extraction = await sarvam_service.extract_symptoms(transcript, language)
@@ -138,9 +136,7 @@ class TriageEngine:
         """Text-only pipeline (skip STT) — for testing and fallback."""
         current_medicines = current_medicines or []
         
-        if language != LanguageCode.UNKNOWN and language != LanguageCode.EN and transcript:
-            transcript = await sarvam_service.translate(transcript, LanguageCode.UNKNOWN, language)
-        
+        # Skipping translation to English - Sarvam LLM handles Indian languages natively!        
         extraction = await sarvam_service.extract_symptoms(transcript, language)
         symptoms = extraction.get("symptoms", [])
         urgency = extraction.get("urgency", "low")
