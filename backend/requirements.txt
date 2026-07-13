@@ -10,7 +10,5 @@ python-multipart==0.0.20
 python-dotenv==1.0.0
 numpy
 scikit-learn
-pytest
 pytest-asyncio
-sentence-transformers
-torch
+fastembed

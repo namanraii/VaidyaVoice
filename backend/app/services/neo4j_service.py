@@ -3,7 +3,7 @@ import logging
 from typing import List, Dict, Any, Optional
 from neo4j import AsyncGraphDatabase, AsyncDriver
 from contextlib import asynccontextmanager
-from sentence_transformers import SentenceTransformer
+from fastembed import TextEmbedding
 
 from app.config import get_settings
 from app.models.schemas import ConditionResult, DrugInteraction, LanguageCode
@@ -17,7 +17,7 @@ class Neo4jService:
     
     def __init__(self):
         self._driver: Optional[AsyncDriver] = None
-        self._model: Optional[SentenceTransformer] = None
+        self._model: Optional[TextEmbedding] = None
     
     async def connect(self):
         """Initialize Neo4j driver."""
@@ -28,12 +28,12 @@ class Neo4jService:
         await self._driver.verify_connectivity()
         logger.info("Neo4j connected")
         
-        # Load SentenceTransformer model for query embeddings
+        # Load FastEmbed model for query embeddings
         try:
-            self._model = SentenceTransformer('all-MiniLM-L6-v2')
-            logger.info("SentenceTransformer model loaded successfully")
+            self._model = TextEmbedding(model_name='sentence-transformers/all-MiniLM-L6-v2')
+            logger.info("FastEmbed model loaded successfully")
         except Exception as e:
-            logger.error(f"Failed to load SentenceTransformer: {e}")
+            logger.error(f"Failed to load FastEmbed: {e}")
             self._model = None
     
     async def close(self):
@@ -89,7 +89,8 @@ class Neo4jService:
         if not exact_symptoms and free_text and self._model:
             logger.info(f"No exact matches found. Running semantic vector search for text: {free_text}")
             try:
-                embedding_vector = self._model.encode(free_text).tolist()
+                embeddings = list(self._model.embed([free_text]))
+                embedding_vector = embeddings[0].tolist()
                 async with self._driver.session() as session:
                     result = await session.run(
                         """
