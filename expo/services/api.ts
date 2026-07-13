@@ -1,5 +1,5 @@
 /** API service for VaidyaVoice backend communication. */
-const API_BASE_URL = 'http://localhost:8001'; // For local testing
+const API_BASE_URL = 'https://vaidyavoice.onrender.com'; // Production Server
 
 export interface TriageRequest {
   audio_b64: string;
