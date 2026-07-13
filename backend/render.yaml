@@ -1,0 +1,69 @@
+# Render Blueprint — deploys web service + workflow + Postgres + Redis
+# https://render.com/docs/blueprint-spec
+
+services:
+  # ───────────────────────────────────────────────────────────
+  # FastAPI Web Service (Gateway)
+  # ───────────────────────────────────────────────────────────
+  - type: web
+    name: vaidyavoice-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: NEO4J_URI
+        sync: false
+      - key: NEO4J_USER
+        sync: false
+      - key: NEO4J_PASSWORD
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: vaidyavoice-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: vaidyavoice-redis
+          type: keyvalue
+          property: connectionString
+      - key: SARVAM_API_KEY
+        sync: false  # Set manually in dashboard
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+    healthCheckPath: /health
+    plan: standard
+
+  # ───────────────────────────────────────────────────────────
+  # Render Workflow Service (Durable Tasks)
+  # ───────────────────────────────────────────────────────────
+  - type: workflow
+    name: vaidyavoice-workflow
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: NEO4J_URI
+        sync: false
+      - key: NEO4J_USER
+        sync: false
+      - key: NEO4J_PASSWORD
+        sync: false
+      - key: SARVAM_API_KEY
+        sync: false
+    plan: standard
+
+  # ───────────────────────────────────────────────────────────
+  # Postgres (Session logs)
+  # ───────────────────────────────────────────────────────────
+  - type: postgres
+    name: vaidyavoice-postgres
+    plan: starter
+    ipAllowList: []
+
+  # ───────────────────────────────────────────────────────────
+  # Redis (Cache frequent queries)
+  # ───────────────────────────────────────────────────────────
+  - type: keyvalue
+    name: vaidyavoice-redis
+    plan: starter
+    ipAllowList: []

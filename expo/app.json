@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "VaidyaVoice",
+    "slug": "vaidyavoice",
+    "version": "2.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FF6B6B"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vaidyavoice.app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "VaidyaVoice needs microphone access to record your symptoms in your own voice.",
+        "NSLocationWhenInUseUsageDescription": "VaidyaVoice uses your location to find the nearest hospital in emergencies."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FF6B6B"
+      },
+      "package": "com.vaidyavoice.app",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow VaidyaVoice to access your microphone to record symptoms.",
+          "enableBackgroundPlayback": true,
+          "enableBackgroundRecording": false
+        }
+      ],
+      "expo-router"
+    ],
+    "scheme": "vaidyavoice",
+    "extra": {
+      "router": {
+        "origin": false
+      }
+    }
+  }
+}
