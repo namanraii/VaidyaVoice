@@ -1,7 +1,7 @@
 """Core triage engine — orchestrates GraphRAG, drug checks, and response composition."""
 import logging
 import base64
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 
 from app.config import get_settings
 from app.models.schemas import (
@@ -12,6 +12,35 @@ from app.services.sarvam_service import sarvam_service
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+
+def determine_triage_level(
+    urgency: str,
+    symptoms: List[str],
+    conditions: List[ConditionResult],
+) -> Tuple[TriageLevel, bool]:
+    """Map LLM urgency plus ranked graph conditions to (triage_level, is_emergency).
+
+    - urgency "high" is always an emergency (RED).
+    - An emergency condition anywhere in the ranking escalates to RED only when
+      at least two symptoms were reported, or the top condition is very severe
+      (severity >= 0.8) and urgency is "medium". This avoids a single vague
+      symptom triggering an emergency from the graph alone.
+    - Otherwise urgency "medium" or a top condition with severity >= 0.5 is
+      YELLOW, and everything else is GREEN.
+    """
+    is_emergency = False
+    if urgency == "high":
+        is_emergency = True
+    elif conditions and any(c.is_emergency for c in conditions):
+        if len(symptoms) >= 2 or (conditions[0].severity_score >= 0.8 and urgency == "medium"):
+            is_emergency = True
+
+    if is_emergency:
+        return TriageLevel.RED, True
+    if urgency == "medium" or (conditions and conditions[0].severity_score >= 0.5):
+        return TriageLevel.YELLOW, False
+    return TriageLevel.GREEN, False
 
 
 class TriageEngine:
@@ -73,20 +102,7 @@ class TriageEngine:
         )
         
         # Step 6: Determine triage level
-        is_emergency = False
-        if urgency == "high":
-            is_emergency = True
-        elif conditions and any(c.is_emergency for c in conditions):
-            # Require multiple symptoms or a very severe match to trigger emergency from graph
-            if len(symptoms) >= 2 or (conditions[0].severity_score >= 0.8 and urgency == "medium"):
-                is_emergency = True
-        
-        if is_emergency:
-            triage_level = TriageLevel.RED
-        elif urgency == "medium" or (conditions and conditions[0].severity_score >= 0.5):
-            triage_level = TriageLevel.YELLOW
-        else:
-            triage_level = TriageLevel.GREEN
+        triage_level, is_emergency = determine_triage_level(urgency, symptoms, conditions)
         
         # Step 7: Compose response + TTS
         logger.info("Step 7: Compose + TTS")
@@ -149,14 +165,7 @@ class TriageEngine:
         top_condition = conditions[0].name if conditions else "Unknown"
         interactions = await neo4j_service.check_drug_interactions(top_condition, current_medicines)
         
-        is_emergency = False
-        if urgency == "high":
-            is_emergency = True
-        elif conditions and any(c.is_emergency for c in conditions):
-            if len(symptoms) >= 2 or (conditions[0].severity_score >= 0.8 and urgency == "medium"):
-                is_emergency = True
-        
-        triage_level = TriageLevel.RED if is_emergency else (TriageLevel.YELLOW if (urgency == "medium" or (conditions and conditions[0].severity_score >= 0.5)) else TriageLevel.GREEN)
+        triage_level, is_emergency = determine_triage_level(urgency, symptoms, conditions)
         
         advice_text_en = await sarvam_service.compose_triage_response(
             top_condition, [i.model_dump() for i in interactions]
