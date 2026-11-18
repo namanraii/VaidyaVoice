@@ -68,3 +68,25 @@ def test_top_condition_severity_threshold_for_yellow(severity, expected):
 def test_only_top_condition_severity_drives_yellow():
     conditions = [cond(severity=0.1), cond(severity=0.95)]
     assert determine_triage_level("low", ["cough"], conditions) == (TriageLevel.GREEN, False)
+
+
+@pytest.mark.parametrize("urgency", ["High", "HIGH", " high ", "high\n"])
+def test_high_urgency_is_case_and_whitespace_insensitive(urgency):
+    # LLM output is not guaranteed to be lower-case; a capitalised "High"
+    # must not silently downgrade an emergency to GREEN.
+    assert determine_triage_level(urgency, ["chest pain"], []) == (TriageLevel.RED, True)
+
+
+@pytest.mark.parametrize("urgency", ["Medium", "MEDIUM", " medium "])
+def test_medium_urgency_is_case_insensitive(urgency):
+    assert determine_triage_level(urgency, ["fever"], []) == (TriageLevel.YELLOW, False)
+
+
+def test_medium_urgency_variant_still_escalates_severe_emergency_condition():
+    conditions = [cond(emergency=True, severity=0.85)]
+    assert determine_triage_level("Medium", ["chest pain"], conditions) == (TriageLevel.RED, True)
+
+
+@pytest.mark.parametrize("urgency", [None, 3, ["high"]])
+def test_non_string_urgency_is_treated_as_low(urgency):
+    assert determine_triage_level(urgency, [], []) == (TriageLevel.GREEN, False)

@@ -28,7 +28,12 @@ def determine_triage_level(
       symptom triggering an emergency from the graph alone.
     - Otherwise urgency "medium" or a top condition with severity >= 0.5 is
       YELLOW, and everything else is GREEN.
+
+    ``urgency`` comes straight from LLM JSON, so it is normalised (trimmed and
+    lower-cased) first; e.g. "High" or " HIGH " must still count as an
+    emergency. Non-string values are treated as "low".
     """
+    urgency = urgency.strip().lower() if isinstance(urgency, str) else "low"
     is_emergency = False
     if urgency == "high":
         is_emergency = True
